@@ -25,7 +25,7 @@ This repository documents my hands-on investigation of a credential access attac
 
 Before diving into the logs, I researched what LSASS is and why attackers target it.
 
-<img width="691" height="393" alt="image" src="https://github.com/user-attachments/assets/3a881eae-0b07-4f46-aa2d-2094b65777ce" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/3a881eae-0b07-4f46-aa2d-2094b65777ce" />
 
 **What I learned:** The Local Security Authority Subsystem Service (LSASS) is a critical Windows process that handles authentication and stores credentials in memory. Attackers dump LSASS memory to extract passwords, hashes, and Kerberos tickets for credential theft and lateral movement.
 
@@ -35,7 +35,7 @@ Before diving into the logs, I researched what LSASS is and why attackers target
 
 I checked the MITRE ATT&CK framework to understand the attack technique.
 
-<img width="674" height="319" alt="image" src="https://github.com/user-attachments/assets/619494d1-618b-497c-a714-a90b4adb8af3" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/619494d1-618b-497c-a714-a90b4adb8af3" />
 
 **Key Finding:** This maps to **T1003.001 - OS Credential Dumping: LSASS Memory**. The framework confirms this is a common post-exploitation technique used by adversaries to obtain credentials from the LSASS process memory. This context helps me understand what I'm hunting for.
 
@@ -45,7 +45,7 @@ I checked the MITRE ATT&CK framework to understand the attack technique.
 
 I started ELK, selected the `secops-3` index, and configured the date/time range to match the alert window.
 
-<img width="468" height="79" alt="image" src="https://github.com/user-attachments/assets/6a3059b1-b5bc-48fe-9a21-26e0336d690d" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/6a3059b1-b5bc-48fe-9a21-26e0336d690d" />
 
 
 **Configuration:** Set the time range around September 25, 2024 @ 17:32:40 to capture events related to the alert while minimizing noise from unrelated activity.
@@ -56,7 +56,7 @@ I started ELK, selected the `secops-3` index, and configured the date/time range
 
 Without any filters applied, I checked the total log volume.
 
-<img width="468" height="193" alt="image" src="https://github.com/user-attachments/assets/33bc162f-272b-4dff-bb06-8e7c3fe6e520" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/33bc162f-272b-4dff-bb06-8e7c3fe6e520" />
 
 
 **Result:** Over 5,000 logs in this timeframe. This demonstrates why targeted filtering is essential - manually reviewing thousands of logs would be inefficient and time-consuming. I need to apply the detection query to narrow down to relevant events.
@@ -67,7 +67,7 @@ Without any filters applied, I checked the total log volume.
 
 I applied the Sigma rule detection query to filter for LSASS dumping activity.
 
-<img width="468" height="192" alt="image" src="https://github.com/user-attachments/assets/df8c2e07-de41-4605-86f0-b6d78f0e2d85" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/df8c2e07-de41-4605-86f0-b6d78f0e2d85" />
 
 
 **Filter Applied:**
@@ -91,7 +91,7 @@ This confirms the alert is a **true positive** - someone is attempting to dump L
 
 I expanded the first event and scrolled through the details to find the parent process.
 
-<img width="468" height="216" alt="image" src="https://github.com/user-attachments/assets/d9c4c5b2-d8bb-4f08-8852-a708fef2b7a5" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/d9c4c5b2-d8bb-4f08-8852-a708fef2b7a5" />
 
 
 **Critical Finding:** Under `process.parent.command_line`, I discovered PowerShell was executed with a **Base64-encoded payload**. This is a common obfuscation technique attackers use to hide malicious code from detection tools and human analysts.
@@ -104,7 +104,7 @@ I expanded the first event and scrolled through the details to find the parent p
 
 I copied the Base64 string and used CyberChef to decode it.
 
-<img width="468" height="215" alt="image" src="https://github.com/user-attachments/assets/5b0c0e1f-6cfd-47e5-82e0-2db6f14cb8d5" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/5b0c0e1f-6cfd-47e5-82e0-2db6f14cb8d5" />
 
 
 **CyberChef Recipe:**
@@ -119,12 +119,12 @@ This revealed the actual malicious code hidden inside the encoded command.
 
 I examined the decoded PowerShell script to understand what it does.
 
-<img width="468" height="288" alt="image" src="https://github.com/user-attachments/assets/50e2d4fc-aecf-428e-b214-0b208835acc8" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/50e2d4fc-aecf-428e-b214-0b208835acc8" />
 
 
 **Key Indicators Identified:**
 
-<img width="468" height="104" alt="image" src="https://github.com/user-attachments/assets/9fe87e3d-2217-4290-ba7b-529f04e8d9ca" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/9fe87e3d-2217-4290-ba7b-529f04e8d9ca" />
 
 
 From the decoded script, I identified:
@@ -142,7 +142,7 @@ This decoded script confirms this is a **sophisticated attack** using encoded Po
 
 Using the parent PID 6180 identified earlier, I filtered to see all activity from this PowerShell session.
 
-<img width="468" height="217" alt="image" src="https://github.com/user-attachments/assets/8f90a3d4-9354-460f-a46c-98bad0349a7c" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/8f90a3d4-9354-460f-a46c-98bad0349a7c" />
 
 
 **Filter:** `process.parent.pid: 6180 AND process.name: powershell.exe`
@@ -169,7 +169,7 @@ I sorted the logs chronologically (ascending) to find the earliest event and ide
 
 Scrolling through the events, I found network communication matching the decoded PowerShell script.
 
-<img width="468" height="215" alt="image" src="https://github.com/user-attachments/assets/03aba575-38f7-4169-a46c-3adab5cd3b95" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/03aba575-38f7-4169-a46c-3adab5cd3b95" />
 
 
 **Network Evidence:**
@@ -185,7 +185,7 @@ This validates my earlier analysis and shows the attack progressed beyond just c
 
 I filtered for process PID 5972 (the explorer.exe process) to confirm the initial execution method.
 
-<img width="468" height="217" alt="image" src="https://github.com/user-attachments/assets/353ad09b-9d2e-411e-9e3f-6a7b7612a0ca" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/353ad09b-9d2e-411e-9e3f-6a7b7612a0ca" />
 
 
 **Finding:** Explorer.exe (PID 5972) spawned the malicious HTA file execution. This **further confirms** a user double-clicked the file, as explorer.exe is the Windows file manager.
@@ -203,7 +203,7 @@ I filtered for process PID 5972 (the explorer.exe process) to confirm the initia
 
 I filtered for the username `wpnuser` that I found in the decoded PowerShell script.
 
-<img width="468" height="217" alt="image" src="https://github.com/user-attachments/assets/5659dcd1-e724-4fb8-8ed0-906e494b0377" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/5659dcd1-e724-4fb8-8ed0-906e494b0377" />
 
 
 **Filter:** `user.name: wpnuser`
@@ -218,7 +218,7 @@ I filtered for the username `wpnuser` that I found in the decoded PowerShell scr
 
 I noticed events showing "attempted" and "received" connections, so I filtered out "received" to focus on outbound attempts.
 
-<img width="469" height="218" alt="image" src="https://github.com/user-attachments/assets/b6eff4c8-ff9e-4178-a4a6-08ec14786487" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/b6eff4c8-ff9e-4178-a4a6-08ec14786487" />
 
 
 **Why this matters:** "Attempted" connections often indicate beaconing - periodic check-ins to a C2 server. By filtering these, I can identify the pattern and frequency of attacker communications.
@@ -229,7 +229,7 @@ I noticed events showing "attempted" and "received" connections, so I filtered o
 
 The filtered results revealed beaconing to a different IP address.
 
-<img width="468" height="217" alt="image" src="https://github.com/user-attachments/assets/68e744cd-704c-4c6d-afb4-bdb72d236294" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/68e744cd-704c-4c6d-afb4-bdb72d236294" />
 
 
 **Second C2 Server Discovered:**
@@ -245,7 +245,7 @@ The filtered results revealed beaconing to a different IP address.
 
 I expanded one of the beaconing events to examine the details.
 
-<img width="468" height="217" alt="image" src="https://github.com/user-attachments/assets/7311e33a-f681-4dd7-b292-cfc59bb74584" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/7311e33a-f681-4dd7-b292-cfc59bb74584" />
 
 
 **Critical Finding:**
@@ -260,7 +260,7 @@ I expanded one of the beaconing events to examine the details.
 
 I opened the process creation events to see what the attacker was executing.
 
-<img width="468" height="219" alt="image" src="https://github.com/user-attachments/assets/cca269d8-a7b5-4aea-8c6f-90e961e26708" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/cca269d8-a7b5-4aea-8c6f-90e961e26708" />
 
 
 **What I'm analyzing:** Process creation logs (Sysmon Event ID 1) show every new process launched. This helps me understand what tools and commands the attacker ran after gaining access.
@@ -271,7 +271,7 @@ I opened the process creation events to see what the attacker was executing.
 
 Scrolling through the process creation details, I found evidence of file renaming.
 
-<img width="468" height="217" alt="image" src="https://github.com/user-attachments/assets/ec7550a0-c4aa-4793-b847-9e913a64cafd" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/ec7550a0-c4aa-4793-b847-9e913a64cafd" />
 
 
 **Evidence of Evasion:**
@@ -286,7 +286,7 @@ Scrolling through the process creation details, I found evidence of file renamin
 
 I filtered for `.hta` file creation events to look for persistence mechanisms.
 
-<img width="468" height="216" alt="image" src="https://github.com/user-attachments/assets/1975286c-a443-49b1-82e4-8a625ebcae8b" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/1975286c-a443-49b1-82e4-8a625ebcae8b" />
 
 
 **Filter:** `file.extension: hta`
@@ -301,7 +301,7 @@ I filtered for `.hta` file creation events to look for persistence mechanisms.
 
 I expanded the FileCreateStreamHash event to see the file location.
 
-<img width="468" height="217" alt="image" src="https://github.com/user-attachments/assets/1cd8cfb7-cea3-4d50-85a5-d354fa044a36" />
+<img width="800-900px" height="Auto" alt="image" src="https://github.com/user-attachments/assets/1cd8cfb7-cea3-4d50-85a5-d354fa044a36" />
 
 
 **Persistence Mechanism Confirmed:**
